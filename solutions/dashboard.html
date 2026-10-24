@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REC 2026 - Dispatch Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center border-b border-gray-700 pb-4 mb-6">
+            <h1 class="text-3xl font-bold text-blue-400">911 Dispatch Planner</h1>
+            <div class="text-right">
+                <p class="text-xl font-mono text-green-400">Hour: <span id="clock">0</span></p>
+                <p class="text-sm text-gray-400">Day: <span id="day">1</span></p>
+            </div>
+        </div>
+
+        <!-- Top Stats Grid -->
+        <div class="grid grid-cols-3 gap-6 mb-8">
+            <div class="bg-gray-800 p-6 rounded-lg shadow border border-gray-700">
+                <h2 class="text-gray-400 text-sm uppercase tracking-wider mb-2">Lives Saved</h2>
+                <p class="text-4xl font-bold text-emerald-400" id="saved">0</p>
+            </div>
+            <div class="bg-gray-800 p-6 rounded-lg shadow border border-gray-700">
+                <h2 class="text-gray-400 text-sm uppercase tracking-wider mb-2">Lives Lost</h2>
+                <p class="text-4xl font-bold text-red-400" id="lost">0</p>
+            </div>
+            <div class="bg-gray-800 p-6 rounded-lg shadow border border-gray-700">
+                <h2 class="text-gray-400 text-sm uppercase tracking-wider mb-2">Care Home Status</h2>
+                <p class="text-2xl font-bold text-purple-400" id="care-timer">Safe</p>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-2 gap-8">
+            <!-- Vehicles -->
+            <div>
+                <h2 class="text-xl font-bold border-b border-gray-700 pb-2 mb-4">Fleet Status</h2>
+                <div id="vehicles-list" class="space-y-3">
+                    <!-- Vehicles injected here by JS -->
+                </div>
+            </div>
+
+            <!-- Emergencies -->
+            <div>
+                <h2 class="text-xl font-bold border-b border-gray-700 pb-2 mb-4">Active Incidents</h2>
+                <div id="incidents-list" class="space-y-3">
+                    <!-- Incidents injected here by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch data from our Node.js server every 500ms
+        setInterval(async () => {
+            try {
+                const res = await fetch('/api/live');
+                const state = await res.json();
+               
+                if(!state) return;
+
+                // Update Header Stats
+                document.getElementById('clock').innerText = state.clock;
+                document.getElementById('day').innerText = state.day;
+                document.getElementById('saved').innerText = state.score.people_saved;
+                document.getElementById('lost').innerText = state.score.people_lost_incidents + state.score.people_lost_chronic;
+
+                // Update Care Home
+                if(state.chronic) {
+                    const timeUntilLoss = state.chronic.next_tick - state.clock;
+                    const careStatus = document.getElementById('care-timer');
+                    careStatus.innerText = timeUntilLoss + " hours left";
+                    careStatus.className = timeUntilLoss < 12 ? "text-2xl font-bold text-red-500" : "text-2xl font-bold text-purple-400";
+                }
+
+                // Update Vehicles
+                const vList = document.getElementById('vehicles-list');
+                vList.innerHTML = state.vehicles.map(v => `
+                    <div class="p-3 rounded bg-gray-800 flex justify-between border-l-4 ${v.status === 'available' ? 'border-green-500' : 'border-yellow-500'}">
+                        <span class="font-bold">${v.id}</span>
+                        <span class="text-sm ${v.status === 'available' ? 'text-green-400' : 'text-yellow-400'} uppercase">${v.status}</span>
+                    </div>
+                `).join('');
+
+                // Update Incidents
+                const iList = document.getElementById('incidents-list');
+                iList.innerHTML = state.incidents.filter(inc => inc.status === 'open').map(inc => `
+                    <div class="p-3 rounded bg-gray-800 border border-gray-700">
+                        <div class="flex justify-between">
+                            <span class="font-bold text-red-400">${inc.id}</span>
+                            <span class="text-xs bg-red-900 text-red-200 px-2 rounded">Deadline: Hr ${inc.deadline}</span>
+                        </div>
+                        <p class="text-sm text-gray-300 mt-1">At Risk: ${inc.people_at_risk}</p>
+                    </div>
+                `).join('');
+
+            } catch(e) {
+                console.error("Waiting for simulation to start...");
+            }
+        }, 500);
+    </script>
+</body>
+</html>
