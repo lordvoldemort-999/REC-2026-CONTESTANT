@@ -3,7 +3,7 @@
 
 ## Installation Guide
  
-- Ensure your machine has python 3.10+ installed.
+- Ensure your machine has python 3.10+ and node installed.
 - Run ``` git clone https://github.com/lordvoldemort-999/REC-2026-CONTESTANT.git ``` to get all files. I recommend doing it inside a separate well named folder.
 - Navigate into the solutions folder using ``` cd REC-2026-CONTESTANT/solutions ```
 - Run ` npm i ` to install dependencies.
